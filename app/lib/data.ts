@@ -130,21 +130,28 @@ const getDalleImage = async (prompt: string) => {
 
 const getNaverShoppingURL = async (prompt: any) => {
   console.log("prompt = ", prompt);
+  const obj: any = {
+    top: null,
+    bottom: null,
+    shoes: null,
+    accessories: null,
+  };
 
   const promiseArray = Object.keys(prompt).map((key) => {
-    return fetch(`${NAVER_URL}?query=${prompt[key].suggest}`, {
+    if (key === "tip") {
+      return null;
+    }
+    return fetch(`${NAVER_URL}?query=${prompt[key].suggest}&display=1`, {
       headers: {
         "X-Naver-Client-Id": NAVER_CLIENT_ID,
         "X-Naver-Client-Secret": NAVER_SCRET,
       },
-    });
+    }).then((res) => res.json().then((data) => (obj[key] = data)));
   });
 
-  const responses = await Promise.all(promiseArray);
+  await Promise.all(promiseArray);
 
-  // 각 응답을 JSON 형식으로 변환합니다.
-  const urls = await Promise.all(responses.map((response) => response.json()));
-  console.log("urls = ", urls);
+  return obj;
 
   // const promise_arr = number_arr.map((num) => {
   //   return axios
@@ -204,7 +211,7 @@ export const getCardData = async ({
 
   return {
     image,
-
+    productsURL,
     weather: weather[0],
     prompt,
   };
