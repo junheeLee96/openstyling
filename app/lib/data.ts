@@ -3,9 +3,9 @@
 import OpenAI from "openai";
 import { OpenWeatherData } from "./definitions";
 
-const openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPENAPI_KEY });
-const NAVER_CLIENT_ID = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || "";
-const NAVER_SCRET = process.env.NEXT_PUBLIC_NAVER_SCRET_KEY || "";
+const openai = new OpenAI({ apiKey: process.env.OPENAPI_KEY });
+const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || "";
+const NAVER_SCRET = process.env.NAVER_SCRET_KEY || "";
 const NAVER_URL = "https://openapi.naver.com/v1/search/shop.json";
 
 const kelvinToCelsius = (kelvin: number) => kelvin - 273.15;
@@ -18,7 +18,7 @@ export const getWeather = async ({
   lon: number;
 }) => {
   try {
-    const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=minutely&appid=${process.env.NEXT_PUBLIC_OPENWEATHER_KEY}&lang=kr`;
+    const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=minutely&appid=${process.env.OPENWEATHER_KEY}&lang=en`;
     const res = await fetch(url);
     const data = await res.json();
 
@@ -152,20 +152,6 @@ const getNaverShoppingURL = async (prompt: any) => {
   await Promise.all(promiseArray);
 
   return obj;
-
-  // const promise_arr = number_arr.map((num) => {
-  //   return axios
-  //     .get(`https://jsonplaceholder.typicode.com/todos/${num}`)
-  //     .then((response) => response.data.id);
-  // });
-
-  // Promise.all(promise_arr)
-  //   .then((response_arr) => {
-  //     console.log(response_arr);
-  //   })
-  //   .catch((error) => {
-  //     console.log(error);
-  //   });
 };
 
 export const getCardData = async ({
@@ -177,6 +163,7 @@ export const getCardData = async ({
 }) => {
   const weatherData = await getWeather({ lon, lat });
   if (!weatherData) return null;
+  const hourly = weatherData.hourly;
   const { weather } = weatherData.daily[1];
 
   // const prompt = await callGPTText({ weatherData });
@@ -212,7 +199,7 @@ export const getCardData = async ({
   return {
     image,
     productsURL,
-    weather: weather[0],
+    weather: { tomorrow: weather[0], hourly },
     prompt,
   };
   // const;

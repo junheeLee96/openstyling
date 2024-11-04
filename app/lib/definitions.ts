@@ -1,3 +1,25 @@
+export type hourly = {
+  dt: number;
+  temp: number;
+  feels_like: number;
+  pressure: number;
+  humidity: number;
+  dew_point: number;
+  uvi: number;
+  clouds: number;
+  visibility: number;
+  wind_speed: number;
+  wind_deg: number;
+  wind_gust?: number;
+  weather: {
+    id: number;
+    main: string;
+    description: string;
+    icon: string;
+  }[];
+  pop: number; // 강수 확률 (확률값)
+}[];
+
 export interface OpenWeatherData {
   lat: number;
   lon: number;
@@ -24,27 +46,7 @@ export interface OpenWeatherData {
       icon: string;
     }[];
   };
-  hourly: {
-    dt: number;
-    temp: number;
-    feels_like: number;
-    pressure: number;
-    humidity: number;
-    dew_point: number;
-    uvi: number;
-    clouds: number;
-    visibility: number;
-    wind_speed: number;
-    wind_deg: number;
-    wind_gust?: number;
-    weather: {
-      id: number;
-      main: string;
-      description: string;
-      icon: string;
-    }[];
-    pop: number; // 강수 확률 (확률값)
-  }[];
+  hourly: hourly;
   daily: {
     summary: string;
     dt: number;
