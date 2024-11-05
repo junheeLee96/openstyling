@@ -1,12 +1,14 @@
 "use server";
 
 import OpenAI from "openai";
-import { OpenWeatherData } from "./definitions";
+import { dataTypes, NaverType, OpenWeatherData } from "./definitions";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAPI_KEY });
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || "";
 const NAVER_SCRET = process.env.NAVER_SCRET_KEY || "";
 const NAVER_URL = "https://openapi.naver.com/v1/search/shop.json";
+const KAKAO_URL = "https://dapi.kakao.com/v2/local/search/address.json";
+const KAKAO_KEY = process.env.KAKAO_KEY || "";
 
 const kelvinToCelsius = (kelvin: number) => kelvin - 273.15;
 
@@ -14,9 +16,9 @@ export const getWeather = async ({
   lat,
   lon,
 }: {
-  lat: number;
-  lon: number;
-}) => {
+  lat: string;
+  lon: string;
+}): Promise<OpenWeatherData | null> => {
   try {
     const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=minutely&appid=${process.env.OPENWEATHER_KEY}&lang=en`;
     const res = await fetch(url);
@@ -25,14 +27,20 @@ export const getWeather = async ({
     return data;
   } catch (e) {
     console.log(e);
-    return;
+    return null;
   }
 };
 
 const callGPTText = async ({
   weatherData,
+  sex,
+  age,
+  purpose,
 }: {
   weatherData: OpenWeatherData;
+  sex: string;
+  age: string;
+  purpose: string;
 }) => {
   const { summary, temp, feels_like, weather } = weatherData.daily[1];
   const prupose = "외출 목적: 데이트";
@@ -50,6 +58,9 @@ const callGPTText = async ({
   )}도)
         - 하늘 상태: ${summary}
         - 목적: ${prupose}
+        - 나이: ${age}
+        - 성별: ${sex}
+        - 외출 목적: ${purpose}
 
         추천 내용:
         1. 기온과 하늘 상태에 맞게, 어떤 색상의 옷을 입어야 하는지 설명해 주세요. 왜 그 색이 어울리는지도 알려주세요.
@@ -116,7 +127,7 @@ const callGPTText = async ({
   }
 };
 
-const getDalleImage = async (prompt: string) => {
+const getDalleImage = async (prompt: string): Promise<string> => {
   return "/examples.png";
   const image = await openai.images.generate({
     model: "dall-e-3",
@@ -124,11 +135,10 @@ const getDalleImage = async (prompt: string) => {
     size: "1024x1024",
     n: 1,
   });
-
-  return image;
+  // return image;
 };
 
-const getNaverShoppingURL = async (prompt: any) => {
+const getNaverShoppingURL = async (prompt: any): Promise<NaverType> => {
   console.log("prompt = ", prompt);
   const obj: any = {
     top: null,
@@ -154,19 +164,31 @@ const getNaverShoppingURL = async (prompt: any) => {
   return obj;
 };
 
-export const getCardData = async ({
-  lat,
-  lon,
-}: {
-  lat: number;
-  lon: number;
-}) => {
-  const weatherData = await getWeather({ lon, lat });
+export const getLocation = async (
+  addr: string
+): Promise<{ lat: string; lon: string }> => {
+  const res = await fetch(`${KAKAO_URL}?query=${addr}`, {
+    headers: {
+      Authorization: `KakaoAK ${KAKAO_KEY}`,
+    },
+  });
+  const data = await res.json();
+  return { lon: data.documents[0].x, lat: data.documents[0].y };
+};
+
+export const getCardData = async (
+  sex: string,
+  area: string,
+  purpose: string,
+  age: string
+): Promise<dataTypes | null> => {
+  const { lat, lon } = await getLocation(area);
+  const weatherData = await getWeather({ lat, lon });
   if (!weatherData) return null;
   const hourly = weatherData.hourly;
   const { weather } = weatherData.daily[1];
 
-  // const prompt = await callGPTText({ weatherData });
+  // const prompt = await callGPTText({ weatherData ,sex,age,purpose});
   const prompt = {
     top: {
       suggest: "네이비 색의 니트",
@@ -192,15 +214,15 @@ export const getCardData = async ({
     },
   };
 
-  if (!prompt) return;
+  if (!prompt) return null;
   const image = await getDalleImage(JSON.stringify(prompt));
   const productsURL = await getNaverShoppingURL(prompt);
 
   return {
     image,
     productsURL,
-    weather: { tomorrow: weather[0], hourly },
+    weather: weatherData,
+    // weather: { tomorrow: weather[0], hourly },
     prompt,
   };
-  // const;
 };

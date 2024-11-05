@@ -9,8 +9,10 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        clickedbg: "rgb(23,23,25)",
         background: "var(--background)",
         foreground: "var(--foreground)",
+        customGray: "rgb(224, 224, 227)",
       },
     },
   },

@@ -95,3 +95,37 @@ export interface OpenWeatherData {
     tags: string[];
   }[];
 }
+
+export type NaverType = {
+  top: {
+    suggest: string;
+    reason: string;
+  };
+  bottom: {
+    suggest: string;
+    reason: string;
+  };
+  shoes: {
+    suggest: string;
+    reason: string;
+  };
+  accessories: {
+    suggest: string;
+    reason: string;
+  };
+  tip: {
+    suggest: string;
+    reason: string;
+  };
+};
+
+export type dataTypes = {
+  weather: OpenWeatherData;
+  image: string;
+  productsURL: any;
+  prompt: {
+    [key: string]: {
+      [key: string]: string;
+    };
+  };
+};
