@@ -8,6 +8,7 @@ import { useData } from "@/app/lib/store/store";
 import { dataTypes } from "@/app/lib/definitions";
 import Graph from "./Graph";
 import Toast from "../Toast";
+import Loading from "../loading";
 
 export default function Research() {
   const { setInfos, infos } = useData();
@@ -27,6 +28,7 @@ export default function Research() {
     const data = await generateData(sex, area, purpose, age);
     if (data.message) {
       setErr(data.message);
+      setIsLoading(false);
       return;
     }
     setInfos(data, area);
@@ -42,9 +44,7 @@ export default function Research() {
 
   return (
     <div>
-      {isLoading ? (
-        <div>Loading....</div>
-      ) : infos ? (
+      {infos ? (
         <Graph />
       ) : (
         <form onSubmit={handleSubmit}>
@@ -100,13 +100,12 @@ export default function Research() {
                 </div>
               </div>
               <div className="flex justify-end mt-4">
-                <SubmitBtn />
+                <SubmitBtn loading={isLoading} />
               </div>
             </div>
           </div>
         </form>
       )}
-
       {err && <Toast err={err} />}
     </div>
   );
