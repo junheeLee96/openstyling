@@ -4,6 +4,7 @@ import { lusitana } from "./ui/fonts";
 import Research from "./ui/card/Research";
 import Container from "./ui/Container";
 import Style from "./ui/styles/Style";
+import About from "./About";
 
 const weatherGradients = {
   morn: "from-blue-400 to-yellow-200",
@@ -25,20 +26,23 @@ export default async function Home(props: {
 
   return (
     <div
-      className={`min-w-screen min-h-screen bg-gradient-to-b ${weatherGradients.morn} p-8 flex items-center flex-col `}
+      className={`min-w-screen min-h-screen bg-gradient-to-b ${weatherGradients.morn} p-8 pb-20 flex items-center flex-col `}
     >
-      <header
-        className={`${lusitana.className} text-2xl lg:text-4xl text-rose-50 font-bold `}
-      >
-        내일의 스타일을 추천해줘요.
-      </header>
-      <Container
-        bg={"bg-gradient-to-r from-blue-500 to-purple-500 flex flex-col"}
-      >
-        {start ? <Research /> : <StartBtn />}
-      </Container>
+      <div className="w-full lg:w-[1024px] flex items-center flex-col">
+        <header
+          className={`${lusitana.className} text-2xl lg:text-4xl text-rose-50 font-bold `}
+        >
+          오픈 스타일링은 내일의 스타일을 추천해줘요.
+        </header>
 
-      <Style />
+        <Container
+          bg={"bg-gradient-to-r from-blue-500 to-purple-500 flex flex-col"}
+        >
+          {start ? <Research /> : <StartBtn />}
+        </Container>
+        <Style />
+        <About />
+      </div>
     </div>
   );
 }

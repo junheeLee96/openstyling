@@ -2,6 +2,12 @@
 
 import OpenAI from "openai";
 import { dataTypes, NaverType, OpenWeatherData } from "./definitions";
+import { headers } from "next/headers";
+import { getRedisClient } from "./redis";
+
+type errorType = {
+  message: string;
+};
 
 const openai = new OpenAI({ apiKey: process.env.OPENAPI_KEY });
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID || "";
@@ -9,6 +15,8 @@ const NAVER_SCRET = process.env.NAVER_SCRET_KEY || "";
 const NAVER_URL = "https://openapi.naver.com/v1/search/shop.json";
 const KAKAO_URL = "https://dapi.kakao.com/v2/local/search/address.json";
 const KAKAO_KEY = process.env.KAKAO_KEY || "";
+
+const DAILY_LIMIT = 3;
 
 const kelvinToCelsius = (kelvin: number) => kelvin - 273.15;
 
@@ -18,7 +26,7 @@ export const getWeather = async ({
 }: {
   lat: string;
   lon: string;
-}): Promise<OpenWeatherData | null> => {
+}) => {
   try {
     const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=minutely&appid=${process.env.OPENWEATHER_KEY}&lang=en`;
     const res = await fetch(url);
@@ -26,8 +34,7 @@ export const getWeather = async ({
 
     return data;
   } catch (e) {
-    console.log(e);
-    return null;
+    return { message: "날씨 정보를 불러오는 중 오류가 발생했습니다." };
   }
 };
 
@@ -84,62 +91,70 @@ const callGPTText = async ({
 
   //   return;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content:
-          "당신은 옷 스타일링 전문가입니다. 날씨와 상황에 맞게 옷을 추천해주세요.",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-      {
-        role: "assistant",
-        content: `
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content:
+            "당신은 옷 스타일링 전문가입니다. 날씨와 상황에 맞게 옷을 추천해주세요.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+        {
+          role: "assistant",
+          content: `
         - **상의**: 네이비 색의 니트 - 이유: 낮 기온이 높으므로 가벼운 니트가 적합합니다. 밝은 톤은 맑은 날씨와 잘 어울립니다.
         - **하의**: 네이비 컬러의 슬랙스 - 이유: 단정하면서도 소개팅에 어울리는 인상을 줍니다.
         - **신발**: 블랙 또는 브라운의 로퍼 - 이유: 단정한 인상을 주고, 소개팅 자리에서 신뢰감을 줄 수 있습니다.
         - **악세사리**: 실버 시계 - 이유: 가벼운 악세사리가 단정한 인상을 더해줍니다.
       `,
-      },
-    ],
-    max_tokens: 400, // 응답 길이 제한
-    temperature: 0.7, // 응답의 다양성 조절
-  });
-  const content = response.choices[0].message.content;
-  if (!content) return null;
-  let cleanContent = content.replace(/```json|```/g, "").trim();
+        },
+      ],
+      max_tokens: 400, // 응답 길이 제한
+      temperature: 0.7, // 응답의 다양성 조절
+    });
+    const content = response.choices[0].message.content;
+    if (!content) return { message: "알 수 없는 오류가 발생했습니다." };
+    let cleanContent = content.replace(/```json|```/g, "").trim();
 
-  // JSON 파싱 전 특수 문자를 처리
-  cleanContent = cleanContent
-    .replace(/\\n/g, "") // 개행 문자 제거
-    .replace(/\\"/g, '"') // 탈출 문자 제거
-    .replace(/\\'/g, "'"); // 단일 인용부호 처리
+    // JSON 파싱 전 특수 문자를 처리
+    cleanContent = cleanContent
+      .replace(/\\n/g, "") // 개행 문자 제거
+      .replace(/\\"/g, '"') // 탈출 문자 제거
+      .replace(/\\'/g, "'"); // 단일 인용부호 처리
 
-  try {
     const parsedContent = JSON.parse(cleanContent); // 여기서 한 번만 JSON.parse를 호출
     return parsedContent; // 이미 객체로 변환된 상태를 반환
-  } catch (error) {
-    console.error("JSON 파싱 오류:", error);
+  } catch (e) {
+    return { message: "토큰이 모두 소진되었습니다." };
   }
 };
 
-const getDalleImage = async (prompt: string): Promise<string> => {
-  return "/examples.png";
-  const image = await openai.images.generate({
-    model: "dall-e-3",
-    prompt: `다음 JSON형태에 맞는 옷을 입은 여자를 그려줘. 이미지는 머리부터 발끝까지 전부 나와야해. ,${prompt}`,
-    size: "1024x1024",
-    n: 1,
-  });
-  // return image;
+const getDalleImage = async (
+  prompt: string
+): Promise<
+  { img: string; message?: undefined } | { img?: undefined; message: string }
+> => {
+  try {
+    const image = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: `다음 JSON형태에 맞는 옷을 입은 여자를 그려줘. 이미지는 머리부터 발끝까지 전부 나와야해. ,${prompt}`,
+      size: "1024x1024",
+      n: 1,
+    });
+    if (image.data[0].url) return { img: image.data[0].url };
+    return { message: "알 수 없는 오류가 발생했습니다." };
+  } catch (e) {
+    console.error("DALL-E 이미지 생성 오류:", e);
+    return { message: "이미지 생성 중 오류가 발생했습니다." };
+  }
 };
 
-const getNaverShoppingURL = async (prompt: any): Promise<NaverType> => {
-  console.log("prompt = ", prompt);
+const getNaverShoppingURL = async (prompt: any) => {
   const obj: any = {
     top: null,
     bottom: null,
@@ -159,36 +174,82 @@ const getNaverShoppingURL = async (prompt: any): Promise<NaverType> => {
     }).then((res) => res.json().then((data) => (obj[key] = data)));
   });
 
-  await Promise.all(promiseArray);
+  try {
+    await Promise.all(promiseArray);
 
-  return obj;
+    return obj;
+  } catch (e) {
+    return { message: "쇼핑 정보를 불러오는 중 오류가 발생했습니다." };
+  }
 };
 
-export const getLocation = async (
-  addr: string
-): Promise<{ lat: string; lon: string }> => {
-  const res = await fetch(`${KAKAO_URL}?query=${addr}`, {
-    headers: {
-      Authorization: `KakaoAK ${KAKAO_KEY}`,
-    },
-  });
-  const data = await res.json();
-  return { lon: data.documents[0].x, lat: data.documents[0].y };
+export const getLocation = async (addr: string) => {
+  try {
+    const res = await fetch(`${KAKAO_URL}?query=${addr}`, {
+      headers: {
+        Authorization: `KakaoAK ${KAKAO_KEY}`,
+      },
+    });
+
+    const data = await res.json();
+    return { lon: data.documents[0].x, lat: data.documents[0].y };
+  } catch (e) {
+    return { message: "위치 정보를 불러오는 중 오류가 발생했습니다." };
+  }
 };
 
-export const getCardData = async (
+export const generateData = async (
   sex: string,
   area: string,
   purpose: string,
   age: string
-): Promise<dataTypes | null> => {
-  const { lat, lon } = await getLocation(area);
-  const weatherData = await getWeather({ lat, lon });
-  if (!weatherData) return null;
+) => {
+  const headersList = await headers();
+  const ip = headersList.get("x-forwarded-for");
+  console.log(ip);
+  if (!ip) return;
+
+  const redis = getRedisClient();
+  if (ip !== process.env.MY_IP || ip !== process.env.LOCAL_IP) {
+    try {
+      const calls = await redis.get(ip);
+      const callCount = calls ? parseInt(calls, 10) : 0;
+      console.log("calls = ", calls);
+      console.log("callCount = ", callCount);
+      if (callCount >= DAILY_LIMIT) {
+        throw new Error("생성 제한 ㅋ");
+        return { message: "생성이 제한되었습니다.(카운트 초과)" };
+      }
+
+      await redis
+        .multi()
+        .incr(ip)
+        .expire(ip, 24 * 60 * 60)
+        .exec();
+
+      // const result = {
+      //   message: "함수가 성공적으로 호출되었습니다.",
+      //   callCount: callCount + 1,
+      // };
+    } catch (e) {
+      return { message: "오류가 발생했습니다." };
+    }
+  }
+
+  const location = await getLocation(area);
+  if (location.message) return location.message;
+  const { lon, lat } = location;
+
+  const weatherData = await getWeather({
+    lat,
+    lon,
+  });
+  if (weatherData.message) return weatherData.message;
   const hourly = weatherData.hourly;
   const { weather } = weatherData.daily[1];
 
-  // const prompt = await callGPTText({ weatherData ,sex,age,purpose});
+  // const prompt = await callGPTText({ weatherData, sex, age, purpose });
+  // if (!prompt.message) return prompt.message;
   const prompt = {
     top: {
       suggest: "네이비 색의 니트",
@@ -214,12 +275,14 @@ export const getCardData = async (
     },
   };
 
-  if (!prompt) return null;
-  const image = await getDalleImage(JSON.stringify(prompt));
+  // const image = await getDalleImage(JSON.stringify(prompt));
+  // if (image.message) return image.message;
+  const image = { img: "/examples.png" };
   const productsURL = await getNaverShoppingURL(prompt);
+  if (productsURL.message) return productsURL.message;
 
   return {
-    image,
+    image: image.img,
     productsURL,
     weather: weatherData,
     // weather: { tomorrow: weather[0], hourly },

@@ -11,7 +11,7 @@ const Clothes = ({
   };
 }) => {
   return (
-    <div className="w-full min-h-[80px] mt-6 p-5 border-b border-customGray">
+    <div className="w-full min-h-[80px] mt-6 lg:p-5 border-b border-customGray">
       <div className="font-extrabold">상의:{clothes.suggest}</div>
       <div className="text-sm mt-1">{clothes.reason}</div>
       <a

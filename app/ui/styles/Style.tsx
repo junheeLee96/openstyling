@@ -13,7 +13,7 @@ const Style = () => {
   if (!infos) return null;
   console.log(Object.keys(infos.prompt).map((key) => key));
   return (
-    <Container bg={"bg-white"}>
+    <Container>
       <div className="flex min-h-[500px] flex-col gap-5 rounded-lg lg:flex-row ">
         <StyleImage img={infos.image} />
         <div className="flex-1 p-4 border border-customGray rounded-md">
