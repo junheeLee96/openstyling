@@ -117,6 +117,8 @@ const callGPTText = async ({
       max_tokens: 400, // 응답 길이 제한
       temperature: 0.7, // 응답의 다양성 조절
     });
+    if (!response.choices[0].message.content)
+      return { message: "크레딧이 부족합니다." };
     const content = response.choices[0].message.content;
     if (!content) return { message: "알 수 없는 오류가 발생했습니다." };
     let cleanContent = content.replace(/```json|```/g, "").trim();
@@ -149,7 +151,7 @@ const getDalleImage = async (
       n: 1,
     });
     if (image.data[0].url) return { img: image.data[0].url };
-    return { message: "알 수 없는 오류가 발생했습니다." };
+    return { message: "크레딧이 부족합니다." };
   } catch (e) {
     console.error("DALL-E 이미지 생성 오류:", e);
     return { message: "이미지 생성 중 오류가 발생했습니다." };
