@@ -215,23 +215,24 @@ export const generateData = async (
   console.log("start");
 
   const redis = getRedisClient();
-  if (ip !== process.env.MY_IP && ip !== process.env.LOCAL_IP) {
-    try {
-      const calls = await redis.get(ip);
-      const callCount = calls ? parseInt(calls, 10) : 0;
-      if (callCount >= DAILY_LIMIT) {
-        return { message: "생성이 제한되었습니다.(카운트 초과)" };
-      }
+  // if (ip !== process.env.MY_IP && ip !== process.env.LOCAL_IP) {
+  //   try {
+  //     const calls = await redis.get(ip);
+  //     const callCount = calls ? parseInt(calls, 10) : 0;
+  //     if (callCount >= DAILY_LIMIT) {
+  //       return { message: "생성이 제한되었습니다.(카운트 초과)" };
+  //     }
 
-      await redis
-        .multi()
-        .incr(ip)
-        .expire(ip, 24 * 60 * 60)
-        .exec();
-    } catch (e) {
-      return { message: "오류가 발생했습니다." };
-    }
-  }
+  //     await redis
+  //       .multi()
+  //       .incr(ip)
+  //       .expire(ip, 24 * 60 * 60)
+  //       .exec();
+  //   } catch (e) {
+  //     return { message: "오류가 발생했습니다." };
+  //   }
+  // }
+  console.log("testing", ip);
   const location = await getLocation(area);
   if (location.message) return location.message;
   const { lon, lat } = location;
