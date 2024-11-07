@@ -239,7 +239,6 @@ export const generateData = async (
     lon,
   });
   if (weatherData.message) return weatherData.message;
-  console.log(sex, age, purpose);
   const prompt = await callGPTText({ weatherData, sex, age, purpose });
   if (prompt.message) return prompt.message;
   // const prompt = {
