@@ -50,9 +50,9 @@ const callGPTText = async ({
   purpose: string;
 }) => {
   const { summary, temp, feels_like, weather } = weatherData.daily[1];
-  const prupose = "외출 목적: 데이트";
+  // const prupose = "외출 목적: 데이트";
   var prompt = `
-        오늘의 날씨 상황을 기준으로 소개팅을 위한 옷차림을 추천해 주세요.
+        오늘의 날씨 상황을 기준으로 나이, 외출 목적, 성별에 맞는 옷차림을 추천해 주세요. 현재 계절에 맞는 컬러를 조합해주세요. 
 
         - 기온: 아침 ${kelvinToCelsius(temp.morn)}도 (체감 ${kelvinToCelsius(
     feels_like.morn
@@ -64,7 +64,7 @@ const callGPTText = async ({
     feels_like.night
   )}도)
         - 하늘 상태: ${summary}
-        - 목적: ${prupose}
+        - 목적: ${purpose}
         - 나이: ${age}
         - 성별: ${sex}
         - 외출 목적: ${purpose}
@@ -135,14 +135,16 @@ const callGPTText = async ({
 };
 
 const getDalleImage = async (
-  prompt: string
+  prompt: string,
+  sex: string,
+  age: string
 ): Promise<
   { img: string; message?: undefined } | { img?: undefined; message: string }
 > => {
   try {
     const image = await openai.images.generate({
       model: "dall-e-3",
-      prompt: `다음 JSON형태에 맞는 옷을 입은 여자를 그려줘. 이미지는 머리부터 발끝까지 전부 나와야해. ,${prompt}`,
+      prompt: `다음 JSON형태에 맞는 옷을 입은 나이대${age}인 ${sex}를 그려줘. 이미지는 머리부터 발끝까지 전부 나와야해. ,${prompt}`,
       size: "1024x1024",
       n: 1,
     });
@@ -206,18 +208,16 @@ export const generateData = async (
 ) => {
   const headersList = await headers();
   const ip = headersList.get("x-forwarded-for");
-  console.log(ip);
+  console.log(ip, typeof ip);
   if (!ip) return;
+  console.log("start");
 
   const redis = getRedisClient();
-  if (ip !== process.env.MY_IP || ip !== process.env.LOCAL_IP) {
+  if (ip !== process.env.MY_IP && ip !== process.env.LOCAL_IP) {
     try {
       const calls = await redis.get(ip);
       const callCount = calls ? parseInt(calls, 10) : 0;
-      console.log("calls = ", calls);
-      console.log("callCount = ", callCount);
       if (callCount >= DAILY_LIMIT) {
-        throw new Error("생성 제한 ㅋ");
         return { message: "생성이 제한되었습니다.(카운트 초과)" };
       }
 
@@ -226,16 +226,10 @@ export const generateData = async (
         .incr(ip)
         .expire(ip, 24 * 60 * 60)
         .exec();
-
-      // const result = {
-      //   message: "함수가 성공적으로 호출되었습니다.",
-      //   callCount: callCount + 1,
-      // };
     } catch (e) {
       return { message: "오류가 발생했습니다." };
     }
   }
-
   const location = await getLocation(area);
   if (location.message) return location.message;
   const { lon, lat } = location;
@@ -245,39 +239,36 @@ export const generateData = async (
     lon,
   });
   if (weatherData.message) return weatherData.message;
-  const hourly = weatherData.hourly;
-  const { weather } = weatherData.daily[1];
+  console.log(sex, age, purpose);
+  const prompt = await callGPTText({ weatherData, sex, age, purpose });
+  if (prompt.message) return prompt.message;
+  // const prompt = {
+  //   top: {
+  //     suggest: "네이비 색의 니트",
+  //     reason:
+  //       "낮 기온이 높으므로 가벼운 니트가 적합합니다. 네이비는 세련되면서도 차분한 느낌을 줍니다.",
+  //   },
+  //   bottom: {
+  //     suggest: "네이비 컬러의 슬랙스",
+  //     reason: "단정하면서도 소개팅에 어울리는 인상을 줍니다.",
+  //   },
+  //   shoes: {
+  //     suggest: "블랙 또는 브라운의 로퍼",
+  //     reason: "단정한 인상을 주고, 소개팅 자리에서 신뢰감을 줄 수 있습니다.",
+  //   },
+  //   accessories: {
+  //     suggest: "실버 시계",
+  //     reason: "가벼운 악세사리가 단정한 인상을 더해줍니다.",
+  //   },
+  //   tip: {
+  //     suggest: "아침과 저녁 기온이 낮으니 얇은 트렌치코트를 가져가면 좋습니다.",
+  //     reason:
+  //       "비가 그친 후에도 쌀쌀할 수 있으니 트렌치코트가 보온에 도움이 됩니다.",
+  //   },
+  // };
 
-  // const prompt = await callGPTText({ weatherData, sex, age, purpose });
-  // if (!prompt.message) return prompt.message;
-  const prompt = {
-    top: {
-      suggest: "네이비 색의 니트",
-      reason:
-        "낮 기온이 높으므로 가벼운 니트가 적합합니다. 네이비는 세련되면서도 차분한 느낌을 줍니다.",
-    },
-    bottom: {
-      suggest: "네이비 컬러의 슬랙스",
-      reason: "단정하면서도 소개팅에 어울리는 인상을 줍니다.",
-    },
-    shoes: {
-      suggest: "블랙 또는 브라운의 로퍼",
-      reason: "단정한 인상을 주고, 소개팅 자리에서 신뢰감을 줄 수 있습니다.",
-    },
-    accessories: {
-      suggest: "실버 시계",
-      reason: "가벼운 악세사리가 단정한 인상을 더해줍니다.",
-    },
-    tip: {
-      suggest: "아침과 저녁 기온이 낮으니 얇은 트렌치코트를 가져가면 좋습니다.",
-      reason:
-        "비가 그친 후에도 쌀쌀할 수 있으니 트렌치코트가 보온에 도움이 됩니다.",
-    },
-  };
-
-  // const image = await getDalleImage(JSON.stringify(prompt));
-  // if (image.message) return image.message;
-  const image = { img: "/examples.png" };
+  const image = await getDalleImage(JSON.stringify(prompt), sex, age);
+  if (image.message) return image.message;
   const productsURL = await getNaverShoppingURL(prompt);
   if (productsURL.message) return productsURL.message;
 

@@ -25,7 +25,7 @@ export function SubmitBtn({ loading }: { loading: boolean }) {
       {loading ? (
         <Loading />
       ) : (
-        <div className="w-full rounded-md font-medium transition-colors bg-blue-500 text-white  flex justify-center">
+        <div className="w-full rounded-md font-medium transition-colors bg-blue-500 text-white  flex justify-center border border-white">
           <button
             type="submit"
             className="hover:bg-blue-600 w-full h-full px-4 py-2  rounded-md font-extrabold"

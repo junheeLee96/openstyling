@@ -26,6 +26,7 @@ export default function Research() {
     const purpose = formData.get("purpose") as string;
     const age = formData.get("age") as string;
     const data = await generateData(sex, area, purpose, age);
+    console.log(data);
     if (data.message) {
       setErr(data.message);
       setIsLoading(false);

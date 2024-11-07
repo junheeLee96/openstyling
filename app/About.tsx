@@ -18,7 +18,7 @@ export default function About() {
               </li>
               <li className="mb-6">
                 <div className="mb-2">
-                  😥 상황과 시간에 맞는 옷차림이(TOP) 고민돼요...{" "}
+                  😥 상황과 시간에 맞는 옷차림이(TPO) 고민돼요...{" "}
                 </div>
                 <div>
                   👉 오픈 스타일링은 시간 별 날씨와 온도, 상황에 맞는 옷차림
