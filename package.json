@@ -2,16 +2,19 @@
   "name": "openstyling",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://github.com/junheeLee96/openstyling",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy": "next build && touch out/.nojekyll && git add -f out/ && git commit -m \"Deploy\" && git subtree push --prefix out origin gh-pages"
   },
   "dependencies": {
     "chart.js": "^4.4.6",
     "chartjs": "^0.3.24",
     "chartjs-plugin-datalabels": "^2.2.0",
+    "gh-pages": "^6.2.0",
     "ioredis": "^5.4.1",
     "next": "15.0.2",
     "openai": "^4.69.0",
