@@ -4,7 +4,7 @@ const isProd = process.env.NODE_ENV === "production";
 const repository = "https://github.com/junheeLee96/openstyling";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  // output: "export",
   images: {
     unoptimized: true,
     domains: [
